@@ -18,7 +18,8 @@ run() {  # run <out> <component> [args...]; resumes if <out> already exists
   [ -f "$out/manifest.json" ] && extra=(--resume)
   echo "=== $comp -> $out"
   uv run plugtax profile "$comp" --out "$out" --yes ${extra[@]+"${extra[@]}"} "$@"
-  echo "=== exit $? for $comp"
+  RUN_RC=$?
+  echo "=== exit $RUN_RC for $comp"
 }
 
 case "${1:-}" in
@@ -49,5 +50,34 @@ case "${1:-}" in
       run "profiles/launch/step1/$name" "$c" "${common[@]}"
     done
     ;;
-  *) echo "usage: $0 step0|step1" >&2; exit 2 ;;
+  step2)
+    # full task set; on a pause (exit 4) wait for the 5-hour reset, then resume
+    common=(--repeats 5 --model claude-sonnet-5-5 --max-usd 6 --max-usd-per-run 1
+            --pause-at-utilization 0.6)
+    comps=(configs/playwright.json configs/context7.json)
+    [ "${PLUGTAX_INCLUDE_SG:-0}" = 1 ] && comps+=("$SG")
+    [ -n "${GITHUB_MCP_TOKEN:-}" ] && comps+=(configs/github.json)
+    [ -n "${SUPABASE_ACCESS_TOKEN:-}" ] && [ -n "${SUPABASE_PROJECT_REF:-}" ] \
+      && comps+=(configs/supabase.json)
+    for c in "${comps[@]}"; do
+      name=$(basename "$c" .json)
+      out="profiles/launch/step2/$name"
+      for attempt in 1 2 3 4 5 6; do
+        run "$out" "$c" "${common[@]}"
+        rc=$RUN_RC
+        [ "$rc" = 4 ] || break
+        reset=$(python3 -c 'import json,sys,time
+r=[json.loads(l) for l in open(sys.argv[1]) if l.strip()]
+e=[(x.get("rate_limit_resets_at") or {}).get("five_hour") for x in r]
+e=[x for x in e if x]
+print(int(max(e)) if e else int(time.time())+1800)' "$out/records.jsonl")
+        wait_s=$(( reset - $(date +%s) + 120 ))
+        [ "$wait_s" -lt 60 ] && wait_s=60
+        echo "=== paused; waiting ${wait_s}s for the 5-hour reset (attempt $attempt)"
+        sleep "$wait_s"
+      done
+      [ "$rc" = 0 ] || [ "$rc" = 4 ] || echo "=== $name ended with exit $rc"
+    done
+    ;;
+  *) echo "usage: $0 step0|step1|step2" >&2; exit 2 ;;
 esac

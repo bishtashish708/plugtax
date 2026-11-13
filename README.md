@@ -15,10 +15,43 @@ plugtax profile hooks.json --kind hook       # a hooks config
 plugtax profile ./skills/tidy-imports        # a skill directory
 ```
 
-> **Status: v0.1, pre-launch.** The harness, statistics and reports are built and
-> tested against a simulated `claude` binary. The first live profiles of popular
-> components are next ([plan](docs/LIVE_PLAN.md)). Until then, no output in this README
-> is a real measurement.
+> **Status: v0.1.** First live profiles are in: [results below](#results-popular-mcp-servers).
+> The "Example output" section further down is still simulated.
+
+## Results: popular MCP servers
+
+Measured on Claude Code 2.1.322 with `claude-sonnet-5-5`, Nov 13 2026: 60 sessions per
+server (4 tasks x 5 repeats x 3 arms), every task solved in every arm. Raw data:
+`plugtax report` on a profile directory; how the "projected" column was computed:
+[`scripts/mcp_schema_size.py`](scripts/mcp_schema_size.py).
+
+| MCP server | tools | **measured** always-on (per request) | projected: full tool schemas (static count) | Δ cost / session (95% CI) | verdict |
+|---|---|---|---|---|---|
+| GitHub (remote, read-only) | 27 + 2 prompts (`tools/list` now returns 28) | **+1,006 tok** (±7) | ~18,600 tok | +$0.0031, +7.6% (−1.5% .. +17.6%) | within noise |
+| Playwright `@playwright/mcp@0.0.85` | 25 | **+384 tok** (±2 paired) | ~5,300 tok | +$0.0027, +6.7% (+0.5% .. +13.1%) | within noise |
+| Context7 `@upstash/context7-mcp@4.7.0` | 2 | **+329 tok** (±6) | ~1,300 tok | +$0.0031, +7.8% (−0.1% .. +16.7%) | within noise |
+
+### Measured vs projected
+
+- **Static schema counts overstate the always-on cost by 4–18x on this Claude Code
+  version.** GitHub's 28 tool schemas are ~74k characters (~18.6k tokens), but the first
+  request of each session grew by only 1,006 tokens. Claude Code defers MCP tool schemas
+  behind tool search and keeps only a short entry per tool in the prompt. The full schema
+  is paid when the model actually looks a tool up, which none of these tasks did.
+- **`claude plugin details` has no number for MCP servers** (it says schemas are "not
+  counted"), and for a hook-only plugin it projected ~0 tokens. For Anthropic's
+  `security-guidance` plugin, the measured overhead was +2 tokens (Haiku smoke test, 2
+  pairs), so the projection held. The run also found that plugin builds a 12 MB Python
+  venv in `~/.claude/security/` and that its Stop hook tries to make its own model
+  calls. Neither shows up in any projection.
+- **Per session the effect is small and inside the noise.** The `noop` arm (identical
+  to baseline) moved ±7.6–16.9% on these short tasks, and each server added ~+7%.
+  Whether that is real needs more repeats, or longer tasks where the carrying cost
+  compounds.
+
+Caveats: the tasks never call these servers' tools, so this is the cost of having them
+installed, not of using them. Tool-search deferral depends on the Claude Code version
+and the model. Re-profile after upgrades.
 
 ## Why
 
@@ -144,7 +177,8 @@ Useful options: `--model` (default `claude-sonnet-5-5`), `--repeats`, `--tasks`,
 
 ## How it works
 
-- **Arms:** `baseline` (no plugins, MCP servers, hooks or user settings), `noop` (same as
+- **Arms:** `baseline` (no user plugins, MCP servers, hooks or user settings; Claude
+  Code's own built-in `cc-plugin-*` plugins still load, identically in every arm), `noop` (same as
   baseline, measures noise), `noop-hook` (only when the component has a SessionStart hook)
   and `component`. Every arm uses Claude Code's default tool set with skills enabled, so
   the component behaves the way it does for you.
@@ -171,6 +205,11 @@ Useful options: `--model` (default `claude-sonnet-5-5`), `--repeats`, `--tasks`,
 - Background-call detection relies on Claude Code's `modelUsage`. A side effect that
   produces no tokens, hook events or config-dir files is invisible to plugtax.
 - Comparison with `/context` is not automated yet.
+- Sessions use your real Claude config dir (needed for subscription auth). A component
+  that writes there (e.g. `security-guidance` builds a venv in `~/.claude/security/`) leaves
+  those files behind. plugtax lists them in the report but doesn't remove them.
+- A component's own model calls made outside Claude Code (e.g. a hook that calls the API)
+  are not in `modelUsage` and are not counted.
 
 ## Development
 

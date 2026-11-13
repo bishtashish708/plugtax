@@ -1,7 +1,11 @@
 # Plan: first live profiles
 
-Nothing below has run yet. Live sessions wait until the TokenTrial v0.3 experiment on
-the same subscription has finished. `plugtax profile` refuses to start while it runs.
+**Done (2026-11-13):** step 0 (14 Haiku sessions), step 1 (27 Sonnet sessions, $0.51
+API-equivalent), step 2 (180 Sonnet sessions, $6.43). Results are in the README. Changes
+from the plan: Supabase was skipped (no credentials). security-guidance ran only in step
+0, because it writes a venv into `~/.claude` (it is opt-in via `PLUGTAX_INCLUDE_SG=1`).
+Step 2 therefore ran 3 servers, not 5. `scripts/launch_profiles.sh step0|step1|step2`
+reruns everything.
 
 ## Usage model
 
