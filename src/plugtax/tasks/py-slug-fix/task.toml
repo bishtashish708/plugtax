@@ -1,0 +1,6 @@
+prompt = """
+The unit tests in tests/ fail. Find and fix the bug in slug.py so that they pass.
+Do not modify the tests. Run them with: python3 -m unittest discover -s tests
+"""
+timeout_s = 600
+tags = ["debug", "python"]

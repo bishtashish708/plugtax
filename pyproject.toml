@@ -1,0 +1,56 @@
+[project]
+name = "plugtax"
+version = "0.1.0"
+description = "Measure what a Claude Code plugin, hook, MCP server or skill actually adds to your cost: paired A/B sessions, not projections."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Ashish Bisht" }]
+requires-python = ">=3.11"
+keywords = ["claude-code", "plugins", "mcp", "hooks", "token-cost", "profiler", "benchmark"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = [
+    # The measurement harness (stream parsing, verified prices, task runner, bootstrap).
+    # Pinned to a commit until tokentrial is on PyPI.
+    "tokentrial @ git+https://github.com/bishtashish708/tokentrial@7f44b4885bbb7c42848298888150c128991d618b",
+    "typer>=0.12",
+]
+
+[project.urls]
+Homepage = "https://github.com/bishtashish708/plugtax"
+Issues = "https://github.com/bishtashish708/plugtax/issues"
+
+[project.scripts]
+plugtax = "plugtax.cli:app"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/plugtax"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["src/plugtax/tasks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

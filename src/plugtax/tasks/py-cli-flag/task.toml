@@ -1,0 +1,7 @@
+prompt = """
+Add a --top N option to wordfreq.py that limits the output to the N most frequent
+words (default: all words). Ties keep the existing order. Keep the existing tests
+passing and add a test for the new option. Run tests with: python3 -m unittest discover -s tests
+"""
+timeout_s = 600
+tags = ["feature", "python"]

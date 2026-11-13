@@ -1,0 +1,7 @@
+prompt = """
+This service reads its settings from several places. When it is started with
+APP_ENV=prod and no other environment variables set, which TCP port does it listen on?
+Work it out from the code and config files, then write only the port number to ANSWER.txt.
+"""
+timeout_s = 600
+tags = ["explore", "read"]

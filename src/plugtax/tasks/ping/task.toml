@@ -1,0 +1,5 @@
+# Minimal session: measures the fixed, always-on overhead of a component
+# (system prompt, tool schemas, SessionStart output) with almost no task noise.
+prompt = "Reply with exactly the word READY. Do not read any files or run any tools."
+timeout_s = 120
+tags = ["overhead"]

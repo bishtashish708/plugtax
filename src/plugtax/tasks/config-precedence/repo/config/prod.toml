@@ -1,0 +1,4 @@
+[server]
+workers = 8
+# Ports below 1024 need root; production sits behind the load balancer on 8443.
+port = 8443
