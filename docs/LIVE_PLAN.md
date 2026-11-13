@@ -36,7 +36,7 @@ a SessionStart hook (to confirm the noop-hook arm and the title-call skip on the
 | GitHub MCP | official server, needs a read-only token | 3 |
 | Context7 | `npx -y @upstash/context7-mcp@<pinned>` | 3 |
 | Supabase MCP | `--read-only`, needs an access token + project ref | 3 |
-| a hook-heavy plugin | to pick, e.g. a popular plugin with SessionStart + PreToolUse hooks | 4 |
+| security-guidance (Anthropic, claude-plugins-official) | plugin dir; hooks: SessionStart, UserPromptSubmit, PostToolUse x3, Stop. `claude plugin details` projects **0 tokens** | 4 |
 
 `--quick --repeats 3`: 3 x 3 x 4 + 4 x 3 = **48 sessions, ~$2 API-equivalent, ~10 min,
 ~5–10 pp of the 5-hour window.** This gives the measured always-on tokens (± a few
@@ -54,7 +54,19 @@ Possible saving before step 2: profile several components against one shared
 baseline/noop set (one multi-arm run). That would cut the session count by about 40%.
 It's not built yet.
 
-## Needs the user's OK before running
+Configs (pinned, no secrets) are in [`configs/`](../configs). GitHub and Supabase read
+their tokens from environment variables, and plugtax refuses to start if one is unset.
+
+claude-mem (thedotmack) is a candidate for a later, supervised profile. It runs its own
+background worker, may make model calls outside the profiled session (invisible to
+`modelUsage`) and writes outside `~/.claude`.
+
+## Approvals (2026-11-13)
+
+Approved: steps 0 and 1, the token setup and the plugin choice. Step 2 (~$17) gets
+confirmed again after step 1's results are in.
+
+## Originally needed the user's OK
 
 - Starting steps 0–2 at all (subscription usage).
 - Credentials for GitHub MCP and Supabase MCP (read-only tokens in a local config file

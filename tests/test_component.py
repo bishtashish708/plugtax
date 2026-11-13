@@ -114,3 +114,34 @@ def test_digest_changes(plugin_dir):
     a = c.resolve(str(plugin_dir)).digest
     (plugin_dir / "skills" / "greet" / "SKILL.md").write_text("changed")
     assert c.resolve(str(plugin_dir)).digest != a
+
+
+def test_mcp_env_refs(tmp_path, monkeypatch):
+    f = tmp_path / "gh.json"
+    f.write_text(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "gh": {
+                        "url": "u",
+                        "headers": {"Authorization": "Bearer ${GH_TOKEN_X}", "X": "${OPT:-none}"},
+                    }
+                }
+            }
+        )
+    )
+    monkeypatch.delenv("GH_TOKEN_X", raising=False)
+    with pytest.raises(c.ComponentError, match="GH_TOKEN_X"):
+        c.resolve(str(f))
+    monkeypatch.setenv("GH_TOKEN_X", "t")
+    assert c.resolve(str(f)).kind == "mcp"
+
+
+def test_shipped_configs_parse(monkeypatch):
+    from pathlib import Path
+
+    for var in ("GITHUB_MCP_TOKEN", "SUPABASE_ACCESS_TOKEN", "SUPABASE_PROJECT_REF"):
+        monkeypatch.setenv(var, "x")
+    configs = Path(__file__).parent.parent / "configs"
+    kinds = {f.stem: c.resolve(str(f)).kind for f in configs.glob("*.json")}
+    assert kinds == {k: "mcp" for k in ("context7", "github", "playwright", "supabase")}

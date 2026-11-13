@@ -311,10 +311,26 @@ def _skill(path: Path, spec: str) -> Component:
     return Component("skill", name, spec, path, inv, _digest(path))
 
 
+_ENV_REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(:-[^}]*)?\}")
+
+
+def missing_env_vars(data: dict) -> list[str]:
+    """`${VAR}` references (without a `:-default`) that are unset in this environment.
+
+    Claude Code expands these in MCP configs; an unset one usually means a server that
+    starts without its credentials and never connects.
+    """
+    text = json.dumps(data)
+    return sorted({m.group(1) for m in _ENV_REF.finditer(text) if not m.group(2)} - set(os.environ))
+
+
 def _mcp(path: Path, spec: str, data: dict) -> Component:
     servers = data.get("mcpServers") or {}
     if not isinstance(servers, dict) or not servers:
         raise ComponentError(f"{spec}: `mcpServers` is empty")
+    missing = missing_env_vars(data)
+    if missing:
+        raise ComponentError(f"{spec}: environment variable(s) not set: {', '.join(missing)}")
     inv = Inventory(mcp_servers=sorted(servers))
     name = "+".join(inv.mcp_servers)
     return Component("mcp", name, spec, path, inv, _digest(path))
